@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Library Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>📚 Library Management System</h1>
+            </div>
+            <div class="header-actions">
+                <span class="user-info" id="userInfo">Loading...</span>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="dashboard.html" class="nav-link active">📊 Dashboard</a></li>
+                    <li><a href="books.html" class="nav-link">📖 Books</a></li>
+                    <li><a href="loans.html" class="nav-link">📋 Loans</a></li>
+                    <li id="usersMenuItem" class="admin-only"><a href="users.html" class="nav-link">👥 Users</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="content">
+            <div class="page-header">
+                <h2>Dashboard</h2>
+                <p>Overview of your library management system</p>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="stats-grid" id="statsGrid">
+                <!-- Dynamic stats cards will be inserted here -->
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <h3>Quick Actions</h3>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="goToBooks()">
+                        📖 Browse Books
+                    </button>
+                    <button class="btn btn-primary user-only" onclick="goToMyLoans()">
+                        📋 My Loans
+                    </button>
+                    <button class="btn btn-primary admin-only" onclick="goToOverdueBooks()">
+                        ⚠️ Overdue Books
+                    </button>
+                    <button class="btn btn-primary admin-only" onclick="goToUsers()">
+                        👥 Manage Users
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="recent-activity">
+                <h3>Recent Activity</h3>
+                <div class="activity-list" id="activityList">
+                    <div class="loading-placeholder">Loading recent activity...</div>
+                </div>
+            </div>
+
+            <!-- Admin-only sections -->
+            <div class="admin-only">
+                <!-- System Status -->
+                <div class="system-status">
+                    <h3>System Status</h3>
+                    <div class="status-indicators">
+                        <div class="status-item">
+                            <span class="status-icon status-good">🟢</span>
+                            <span>Database Connection</span>
+                            <span class="status-value">Active</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-icon status-warning">🟡</span>
+                            <span>Overdue Books</span>
+                            <span class="status-value" id="overdueCount">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-icon status-good">🟢</span>
+                            <span>System Health</span>
+                            <span class="status-value">Operational</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Loading dashboard...</p>
+    </div>
+
+    <!-- Message Container -->
+    <div id="messageContainer" class="message-container"></div>
+
+    <script src="js/main.js"></script>
+    <script>
+        let userRole = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!await checkAuth()) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            await loadDashboard();
+        });
+
+        // Load dashboard data
+        async function loadDashboard() {
+            showLoading();
+            
+            try {
+                const user = getCurrentUser();
+                userRole = user.role;
+                
+                // Update user info display
+                document.getElementById('userInfo').textContent = `${user.name} (${user.role})`;
+                
+                // Show/hide role-specific elements
+                toggleRoleElements(user.role);
+                
+                // Load statistics
+                await loadStatistics();
+                
+                // Load recent activity
+                await loadRecentActivity();
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showMessage('Failed to load dashboard data', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Load statistics based on user role
+        async function loadStatistics() {
+            try {
+                if (userRole === 'admin') {
+                    await loadAdminStats();
+                } else {
+                    await loadUserStats();
+                }
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+                document.getElementById('statsGrid').innerHTML = '<p class="error">Failed to load statistics</p>';
+            }
+        }
+
+        // Load admin statistics
+        async function loadAdminStats() {
+            const [bookStats, userStats, loanStats] = await Promise.all([
+                api('/books/stats'),
+                api('/users/stats'),
+                api('/loans/stats')
+            ]);
+
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-content">
+                        <h3>${bookStats.stats.totalBooks}</h3>
+                        <p>Total Books</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📖</div>
+                    <div class="stat-content">
+                        <h3>${bookStats.stats.availableBooks}</h3>
+                        <p>Available Books</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-content">
+                        <h3>${userStats.stats.totalUsers}</h3>
+                        <p>Total Users</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-content">
+                        <h3>${loanStats.stats.activeLoans}</h3>
+                        <p>Active Loans</p>
+                    </div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-content">
+                        <h3>${loanStats.stats.overdueLoans}</h3>
+                        <p>Overdue Books</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-content">
+                        <h3>$${loanStats.stats.totalOutstandingFines.toFixed(2)}</h3>
+                        <p>Outstanding Fines</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('statsGrid').innerHTML = statsHtml;
+            
+            // Update overdue count in system status
+            document.getElementById('overdueCount').textContent = loanStats.stats.overdueLoans;
+        }
+
+        // Load user statistics
+        async function loadUserStats() {
+            const user = getCurrentUser();
+            const [userLoans, userFines] = await Promise.all([
+                api('/loans'),
+                api('/loans/fines')
+            ]);
+
+            const activeLoans = userLoans.loans.filter(loan => loan.status === 'active');
+            const overdueLoans = userLoans.loans.filter(loan => loan.status === 'overdue');
+
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-content">
+                        <h3>${activeLoans.length}</h3>
+                        <p>Active Loans</p>
+                    </div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-content">
+                        <h3>${overdueLoans.length}</h3>
+                        <p>Overdue Books</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📖</div>
+                    <div class="stat-content">
+                        <h3>${userLoans.loans.filter(loan => loan.status === 'returned').length}</h3>
+                        <p>Books Returned</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-content">
+                        <h3>$${userFines.totalUnpaid.toFixed(2)}</h3>
+                        <p>Outstanding Fines</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('statsGrid').innerHTML = statsHtml;
+        }
+
+        // Load recent activity
+        async function loadRecentActivity() {
+            try {
+                const loans = await api('/loans');
+                const recentLoans = loans.loans
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                    .slice(0, 5);
+
+                let activityHtml = '';
+                
+                if (recentLoans.length === 0) {
+                    activityHtml = '<p class="no-data">No recent activity</p>';
+                } else {
+                    activityHtml = '<div class="activity-items">';
+                    recentLoans.forEach(loan => {
+                        const date = new Date(loan.createdAt).toLocaleDateString();
+                        const statusClass = loan.status === 'overdue' ? 'status-warning' : 
+                                          loan.status === 'returned' ? 'status-good' : 'status-active';
+                        
+                        activityHtml += `
+                            <div class="activity-item">
+                                <div class="activity-info">
+                                    <strong>"${loan.bookTitle}"</strong> by ${loan.bookAuthor}
+                                    ${userRole === 'admin' ? `<span class="activity-user">- ${loan.userName}</span>` : ''}
+                                </div>
+                                <div class="activity-meta">
+                                    <span class="activity-status ${statusClass}">${loan.status.toUpperCase()}</span>
+                                    <span class="activity-date">${date}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    activityHtml += '</div>';
+                }
+
+                document.getElementById('activityList').innerHTML = activityHtml;
+                
+            } catch (error) {
+                console.error('Error loading recent activity:', error);
+                document.getElementById('activityList').innerHTML = '<p class="error">Failed to load recent activity</p>';
+            }
+        }
+
+        // Quick action functions
+        function goToBooks() {
+            window.location.href = 'books.html';
+        }
+
+        function goToMyLoans() {
+            window.location.href = 'loans.html';
+        }
+
+        function goToOverdueBooks() {
+            window.location.href = 'loans.html?filter=overdue';
+        }
+
+        function goToUsers() {
+            window.location.href = 'users.html';
+        }
+
+        // Toggle role-specific elements
+        function toggleRoleElements(role) {
+            const adminElements = document.querySelectorAll('.admin-only');
+            const userElements = document.querySelectorAll('.user-only');
+
+            if (role === 'admin') {
+                adminElements.forEach(el => el.style.display = 'block');
+                userElements.forEach(el => el.style.display = 'none');
+            } else {
+                adminElements.forEach(el => el.style.display = 'none');
+                userElements.forEach(el => el.style.display = 'block');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loans - Library Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>📚 Library Management System</h1>
+            </div>
+            <div class="header-actions">
+                <span class="user-info" id="userInfo">Loading...</span>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="dashboard.html" class="nav-link">📊 Dashboard</a></li>
+                    <li><a href="books.html" class="nav-link">📖 Books</a></li>
+                    <li><a href="loans.html" class="nav-link active">📋 Loans</a></li>
+                    <li id="usersMenuItem" class="admin-only"><a href="users.html" class="nav-link">👥 Users</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="content">
+            <div class="page-header">
+                <h2 id="pageTitle">Loan Management</h2>
+                <div class="page-actions admin-only">
+                    <select id="adminViewFilter" onchange="changeAdminView()">
+                        <option value="all">All Loans</option>
+                        <option value="active">Active Loans</option>
+                        <option value="overdue">Overdue Loans</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Status Tabs -->
+            <div class="status-tabs user-only">
+                <button class="tab-btn active" data-status="all" onclick="filterByStatus('all')">
+                    All Loans
+                </button>
+                <button class="tab-btn" data-status="active" onclick="filterByStatus('active')">
+                    Active
+                </button>
+                <button class="tab-btn" data-status="returned" onclick="filterByStatus('returned')">
+                    Returned
+                </button>
+                <button class="tab-btn" data-status="overdue" onclick="filterByStatus('overdue')">
+                    Overdue
+                </button>
+            </div>
+
+            <!-- Loans Table -->
+            <div class="table-container">
+                <table class="loans-table" id="loansTable">
+                    <thead>
+                        <tr>
+                            <th>Book</th>
+                            <th class="admin-only">Borrower</th>
+                            <th>Loan Date</th>
+                            <th>Due Date</th>
+                            <th>Return Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="loansTableBody">
+                        <tr>
+                            <td colspan="7" class="loading-placeholder">Loading loans...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Fines Section -->
+            <div class="fines-section user-only" id="finesSection" style="display: none;">
+                <h3>Outstanding Fines</h3>
+                <div class="fines-container" id="finesContainer">
+                    <!-- Fines will be loaded here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Return Book Modal -->
+    <div id="returnModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Return Book</h3>
+                <span class="close" onclick="closeReturnModal()">&times;</span>
+            </div>
+            <div id="returnModalContent">
+                <p>Are you sure you want to return this book?</p>
+                <div class="book-return-info" id="bookReturnInfo">
+                    <!-- Book info will be inserted here -->
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeReturnModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="confirmReturn()">Return Book</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Message Container -->
+    <div id="messageContainer" class="message-container"></div>
+
+    <script src="js/main.js"></script>
+    <script>
+        let allLoans = [];
+        let filteredLoans = [];
+        let userRole = null;
+        let currentReturnLoanId = null;
+        let currentFilter = 'all';
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!await checkAuth()) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const user = getCurrentUser();
+            userRole = user.role;
+            document.getElementById('userInfo').textContent = `${user.name} (${user.role})`;
+            
+            toggleRoleElements(user.role);
+            
+            // Check URL parameters for filters
+            const urlParams = new URLSearchParams(window.location.search);
+            const filterParam = urlParams.get('filter');
+            if (filterParam) {
+                currentFilter = filterParam;
+                if (userRole === 'admin') {
+                    document.getElementById('adminViewFilter').value = filterParam;
+                } else {
+                    activateTab(filterParam);
+                }
+            }
+
+            await loadLoans();
+            
+            if (userRole === 'user') {
+                await loadFines();
+            }
+        });
+
+        // Load loans based on user role and filter
+        async function loadLoans() {
+            showLoading();
+            try {
+                let endpoint = '/loans';
+                
+                if (userRole === 'admin') {
+                    if (currentFilter === 'active') {
+                        endpoint = '/loans/active';
+                    } else if (currentFilter === 'overdue') {
+                        endpoint = '/loans/overdue';
+                    }
+                }
+                
+                const response = await api(endpoint);
+                allLoans = response.loans;
+                
+                if (userRole === 'user' && currentFilter !== 'all') {
+                    filteredLoans = allLoans.filter(loan => loan.status === currentFilter);
+                } else {
+                    filteredLoans = [...allLoans];
+                }
+                
+                displayLoans();
+                
+            } catch (error) {
+                console.error('Error loading loans:', error);
+                showMessage('Failed to load loans', 'error');
+                document.getElementById('loansTableBody').innerHTML = 
+                    '<tr><td colspan="7" class="error">Failed to load loans</td></tr>';
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Display loans in table
+        function displayLoans() {
+            const tbody = document.getElementById('loansTableBody');
+            
+            if (filteredLoans.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">No loans found</td></tr>';
+                return;
+            }
+
+            let loansHtml = '';
+            filteredLoans.forEach(loan => {
+                const statusClass = getStatusClass(loan.status);
+                const dueDate = new Date(loan.dueDate);
+                const isOverdue = loan.status === 'active' && new Date() > dueDate;
+                const displayStatus = isOverdue ? 'overdue' : loan.status;
+                
+                loansHtml += `
+                    <tr class="loan-row ${statusClass}">
+                        <td>
+                            <div class="book-info">
+                                <strong>${escapeHtml(loan.bookTitle)}</strong>
+                                <small>by ${escapeHtml(loan.bookAuthor)}</small>
+                            </div>
+                        </td>
+                        ${userRole === 'admin' ? `<td>${escapeHtml(loan.userName)}</td>` : ''}
+                        <td>${formatDate(loan.loanDate)}</td>
+                        <td class="${isOverdue ? 'overdue-date' : ''}">${formatDate(loan.dueDate)}</td>
+                        <td>${loan.returnDate ? formatDate(loan.returnDate) : '-'}</td>
+                        <td>
+                            <span class="status-badge ${statusClass}">
+                                ${displayStatus.toUpperCase()}
+                            </span>
+                        </td>
+                        <td>
+                            ${loan.status === 'active' ? 
+                                `<button class="btn btn-sm btn-primary" onclick="openReturnModal(${loan.id})">
+                                    Return Book
+                                </button>` : 
+                                `<span class="text-muted">-</span>`
+                            }
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = loansHtml;
+        }
+
+        // Get status CSS class
+        function getStatusClass(status) {
+            switch (status) {
+                case 'active': return 'status-active';
+                case 'returned': return 'status-returned';
+                case 'overdue': return 'status-overdue';
+                default: return '';
+            }
+        }
+
+        // Filter by status (user view)
+        function filterByStatus(status) {
+            currentFilter = status;
+            activateTab(status);
+            
+            if (status === 'all') {
+                filteredLoans = [...allLoans];
+            } else {
+                filteredLoans = allLoans.filter(loan => {
+                    if (status === 'overdue') {
+                        const dueDate = new Date(loan.dueDate);
+                        return loan.status === 'active' && new Date() > dueDate;
+                    }
+                    return loan.status === status;
+                });
+            }
+            
+            displayLoans();
+        }
+
+        // Activate tab
+        function activateTab(status) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-status="${status}"]`).classList.add('active');
+        }
+
+        // Change admin view
+        function changeAdminView() {
+            const filter = document.getElementById('adminViewFilter').value;
+            currentFilter = filter;
+            loadLoans();
+        }
+
+        // Open return modal
+        async function openReturnModal(loanId) {
+            try {
+                const loan = allLoans.find(l => l.id === loanId);
+                if (!loan) {
+                    showMessage('Loan not found', 'error');
+                    return;
+                }
+
+                currentReturnLoanId = loanId;
+                
+                const dueDate = new Date(loan.dueDate);
+                const isOverdue = new Date() > dueDate;
+                const daysOverdue = isOverdue ? Math.ceil((new Date() - dueDate) / (1000 * 60 * 60 * 24)) : 0;
+                
+                const bookInfoHtml = `
+                    <div class="return-book-details">
+                        <h4>${escapeHtml(loan.bookTitle)}</h4>
+                        <p>by ${escapeHtml(loan.bookAuthor)}</p>
+                        <p><strong>Due Date:</strong> ${formatDate(loan.dueDate)}</p>
+                        ${isOverdue ? `
+                            <div class="overdue-warning">
+                                <p class="warning-text">⚠️ This book is ${daysOverdue} day(s) overdue!</p>
+                                <p>A fine of $${(daysOverdue * 1.00).toFixed(2)} will be applied.</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                document.getElementById('bookReturnInfo').innerHTML = bookInfoHtml;
+                document.getElementById('returnModal').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error opening return modal:', error);
+                showMessage('Failed to load book details', 'error');
+            }
+        }
+
+        // Confirm return
+        async function confirmReturn() {
+            if (!currentReturnLoanId) return;
+
+            showLoading();
+            try {
+                await api('/loans/return', 'POST', { loanId: currentReturnLoanId });
+                showMessage('Book returned successfully!', 'success');
+                closeReturnModal();
+                await loadLoans();
+                
+                if (userRole === 'user') {
+                    await loadFines(); // Refresh fines in case a new fine was added
+                }
+                
+            } catch (error) {
+                console.error('Error returning book:', error);
+                showMessage(error.message || 'Failed to return book', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Close return modal
+        function closeReturnModal() {
+            document.getElementById('returnModal').style.display = 'none';
+            currentReturnLoanId = null;
+        }
+
+        // Load user fines
+        async function loadFines() {
+            try {
+                const response = await api('/loans/fines');
+                const unpaidFines = response.fines.filter(fine => !fine.paid);
+                
+                if (unpaidFines.length > 0) {
+                    document.getElementById('finesSection').style.display = 'block';
+                    displayFines(unpaidFines, response.totalUnpaid);
+                } else {
+                    document.getElementById('finesSection').style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error loading fines:', error);
+            }
+        }
+
+        // Display fines
+        function displayFines(fines, totalUnpaid) {
+            let finesHtml = `
+                <div class="fines-summary">
+                    <h4>Total Outstanding: $${totalUnpaid.toFixed(2)}</h4>
+                </div>
+                <div class="fines-list">
+            `;
+
+            fines.forEach(fine => {
+                finesHtml += `
+                    <div class="fine-item">
+                        <div class="fine-info">
+                            <strong>$${fine.amount.toFixed(2)}</strong>
+                            <p>${escapeHtml(fine.reason)}</p>
+                            <small>Created: ${formatDate(fine.createdAt)}</small>
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="payFine(${fine.id})">
+                            Pay Fine
+                        </button>
+                    </div>
+                `;
+            });
+
+            finesHtml += '</div>';
+            document.getElementById('finesContainer').innerHTML = finesHtml;
+        }
+
+        // Pay fine
+        async function payFine(fineId) {
+            if (!confirm('Are you sure you want to pay this fine?')) {
+                return;
+            }
+
+            showLoading();
+            try {
+                await api('/loans/pay-fine', 'POST', { fineId });
+                showMessage('Fine paid successfully!', 'success');
+                await loadFines();
+            } catch (error) {
+                console.error('Error paying fine:', error);
+                showMessage(error.message || 'Failed to pay fine', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString();
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Toggle role-specific elements
+        function toggleRoleElements(role) {
+            const adminElements = document.querySelectorAll('.admin-only');
+            const userElements = document.querySelectorAll('.user-only');
+
+            if (role === 'admin') {
+                adminElements.forEach(el => el.style.display = 'block');
+                userElements.forEach(el => el.style.display = 'none');
+                
+                // Adjust table header for admin view
+                const thead = document.querySelector('#loansTable thead tr');
+                thead.querySelector('.admin-only').style.display = 'table-cell';
+            } else {
+                adminElements.forEach(el => el.style.display = 'none');
+                userElements.forEach(el => el.style.display = 'block');
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('returnModal');
+            if (event.target === modal) {
+                closeReturnModal();
+            }
+        }
+    </script>
+</body>
+</html>

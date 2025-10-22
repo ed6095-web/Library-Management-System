@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Books - Library Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>📚 Library Management System</h1>
+            </div>
+            <div class="header-actions">
+                <span class="user-info" id="userInfo">Loading...</span>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="dashboard.html" class="nav-link">📊 Dashboard</a></li>
+                    <li><a href="books.html" class="nav-link active">📖 Books</a></li>
+                    <li><a href="loans.html" class="nav-link">📋 Loans</a></li>
+                    <li id="usersMenuItem" class="admin-only"><a href="users.html" class="nav-link">👥 Users</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="content">
+            <div class="page-header">
+                <h2>Book Catalog</h2>
+                <div class="page-actions">
+                    <button class="btn btn-primary admin-only" onclick="openAddBookModal()">
+                        ➕ Add New Book
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search and Filters -->
+            <div class="search-filters">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Search books by title, author, or category...">
+                    <button class="btn btn-secondary" onclick="searchBooks()">🔍 Search</button>
+                    <button class="btn btn-secondary" onclick="clearSearch()">✖️ Clear</button>
+                </div>
+                
+                <div class="filter-bar">
+                    <select id="categoryFilter" onchange="filterByCategory()">
+                        <option value="">All Categories</option>
+                    </select>
+                    <select id="availabilityFilter" onchange="filterByAvailability()">
+                        <option value="">All Books</option>
+                        <option value="available">Available Only</option>
+                        <option value="unavailable">Unavailable Only</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Books Grid -->
+            <div class="books-container">
+                <div class="books-grid" id="booksGrid">
+                    <div class="loading-placeholder">Loading books...</div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination" style="display: none;">
+                <button class="btn btn-secondary" id="prevPage" onclick="changePage(-1)">← Previous</button>
+                <span id="pageInfo">Page 1 of 1</span>
+                <button class="btn btn-secondary" id="nextPage" onclick="changePage(1)">Next →</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Book Modal -->
+    <div id="bookModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New Book</h3>
+                <span class="close" onclick="closeBookModal()">&times;</span>
+            </div>
+            <form id="bookForm">
+                <div class="form-group">
+                    <label for="bookTitle">Title *</label>
+                    <input type="text" id="bookTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookAuthor">Author *</label>
+                    <input type="text" id="bookAuthor" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookCategory">Category *</label>
+                    <input type="text" id="bookCategory" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookIsbn">ISBN</label>
+                    <input type="text" id="bookIsbn">
+                </div>
+                <div class="form-group">
+                    <label for="bookCopies">Total Copies *</label>
+                    <input type="number" id="bookCopies" min="1" value="1" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeBookModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Book</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Book Details Modal -->
+    <div id="bookDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Book Details</h3>
+                <span class="close" onclick="closeBookDetailsModal()">&times;</span>
+            </div>
+            <div id="bookDetailsContent">
+                <!-- Book details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Message Container -->
+    <div id="messageContainer" class="message-container"></div>
+
+    <script src="js/main.js"></script>
+    <script>
+        let allBooks = [];
+        let filteredBooks = [];
+        let currentPage = 1;
+        let booksPerPage = 12;
+        let userRole = null;
+        let editingBookId = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!await checkAuth()) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const user = getCurrentUser();
+            userRole = user.role;
+            document.getElementById('userInfo').textContent = `${user.name} (${user.role})`;
+            
+            toggleRoleElements(user.role);
+            await loadBooks();
+            await loadCategories();
+            
+            // Setup search on Enter key
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    searchBooks();
+                }
+            });
+        });
+
+        // Load all books
+        async function loadBooks() {
+            showLoading();
+            try {
+                const response = await api('/books');
+                allBooks = response.books;
+                filteredBooks = [...allBooks];
+                displayBooks();
+            } catch (error) {
+                console.error('Error loading books:', error);
+                showMessage('Failed to load books', 'error');
+                document.getElementById('booksGrid').innerHTML = '<p class="error">Failed to load books</p>';
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Load categories for filter
+        async function loadCategories() {
+            try {
+                const response = await api('/books/categories');
+                const categorySelect = document.getElementById('categoryFilter');
+                
+                response.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    categorySelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Display books in grid
+        function displayBooks() {
+            const startIndex = (currentPage - 1) * booksPerPage;
+            const endIndex = startIndex + booksPerPage;
+            const booksToShow = filteredBooks.slice(startIndex, endIndex);
+
+            if (booksToShow.length === 0) {
+                document.getElementById('booksGrid').innerHTML = '<p class="no-data">No books found</p>';
+                document.getElementById('pagination').style.display = 'none';
+                return;
+            }
+
+            let booksHtml = '';
+            booksToShow.forEach(book => {
+                const availabilityClass = book.availability ? 'available' : 'unavailable';
+                const availabilityText = book.availability ? 'Available' : 'Not Available';
+                
+                booksHtml += `
+                    <div class="book-card ${availabilityClass}">
+                        <div class="book-header">
+                            <h4 class="book-title">${escapeHtml(book.title)}</h4>
+                            <span class="availability-badge ${availabilityClass}">${availabilityText}</span>
+                        </div>
+                        <div class="book-info">
+                            <p class="book-author">👤 ${escapeHtml(book.author)}</p>
+                            <p class="book-category">📂 ${escapeHtml(book.category)}</p>
+                            <p class="book-copies">📚 ${book.availableCopies}/${book.totalCopies} available</p>
+                            ${book.isbn ? `<p class="book-isbn">📖 ISBN: ${escapeHtml(book.isbn)}</p>` : ''}
+                        </div>
+                        <div class="book-actions">
+                            <button class="btn btn-secondary" onclick="viewBookDetails(${book.id})">
+                                👁️ View Details
+                            </button>
+                            ${book.availability && userRole === 'user' ? 
+                                `<button class="btn btn-primary" onclick="borrowBook(${book.id})">📚 Borrow</button>` : ''}
+                            ${userRole === 'admin' ? `
+                                <button class="btn btn-warning" onclick="editBook(${book.id})">✏️ Edit</button>
+                                <button class="btn btn-danger" onclick="deleteBook(${book.id})">🗑️ Delete</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('booksGrid').innerHTML = booksHtml;
+            updatePagination();
+        }
+
+        // Update pagination
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredBooks.length / booksPerPage);
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+        }
+
+        // Change page
+        function changePage(direction) {
+            const totalPages = Math.ceil(filteredBooks.length / booksPerPage);
+            const newPage = currentPage + direction;
+            
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                displayBooks();
+            }
+        }
+
+        // Search books
+        function searchBooks() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                filteredBooks = [...allBooks];
+            } else {
+                filteredBooks = allBooks.filter(book => 
+                    book.title.toLowerCase().includes(searchTerm) ||
+                    book.author.toLowerCase().includes(searchTerm) ||
+                    book.category.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            currentPage = 1;
+            displayBooks();
+        }
+
+        // Clear search
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('availabilityFilter').value = '';
+            filteredBooks = [...allBooks];
+            currentPage = 1;
+            displayBooks();
+        }
+
+        // Filter by category
+        function filterByCategory() {
+            const category = document.getElementById('categoryFilter').value;
+            const availability = document.getElementById('availabilityFilter').value;
+            
+            applyFilters(category, availability);
+        }
+
+        // Filter by availability
+        function filterByAvailability() {
+            const category = document.getElementById('categoryFilter').value;
+            const availability = document.getElementById('availabilityFilter').value;
+            
+            applyFilters(category, availability);
+        }
+
+        // Apply filters
+        function applyFilters(category, availability) {
+            filteredBooks = allBooks.filter(book => {
+                const categoryMatch = !category || book.category === category;
+                const availabilityMatch = !availability || 
+                    (availability === 'available' && book.availability) ||
+                    (availability === 'unavailable' && !book.availability);
+                
+                return categoryMatch && availabilityMatch;
+            });
+            
+            currentPage = 1;
+            displayBooks();
+        }
+
+        // View book details
+        async function viewBookDetails(bookId) {
+            try {
+                const response = await api(`/books/${bookId}`);
+                const book = response.book;
+                
+                const detailsHtml = `
+                    <div class="book-details">
+                        <h3>${escapeHtml(book.title)}</h3>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <strong>Author:</strong> ${escapeHtml(book.author)}
+                            </div>
+                            <div class="detail-item">
+                                <strong>Category:</strong> ${escapeHtml(book.category)}
+                            </div>
+                            <div class="detail-item">
+                                <strong>ISBN:</strong> ${book.isbn ? escapeHtml(book.isbn) : 'Not provided'}
+                            </div>
+                            <div class="detail-item">
+                                <strong>Total Copies:</strong> ${book.totalCopies}
+                            </div>
+                            <div class="detail-item">
+                                <strong>Available Copies:</strong> ${book.availableCopies}
+                            </div>
+                            <div class="detail-item">
+                                <strong>Status:</strong> 
+                                <span class="availability-badge ${book.availability ? 'available' : 'unavailable'}">
+                                    ${book.availability ? 'Available' : 'Not Available'}
+                                </span>
+                            </div>
+                        </div>
+                        ${book.availability && userRole === 'user' ? `
+                            <div class="modal-actions">
+                                <button class="btn btn-primary" onclick="borrowBook(${book.id}); closeBookDetailsModal();">
+                                    📚 Borrow This Book
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                document.getElementById('bookDetailsContent').innerHTML = detailsHtml;
+                document.getElementById('bookDetailsModal').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading book details:', error);
+                showMessage('Failed to load book details', 'error');
+            }
+        }
+
+        // Borrow book
+        async function borrowBook(bookId) {
+            if (!confirm('Are you sure you want to borrow this book?')) {
+                return;
+            }
+
+            showLoading();
+            try {
+                await api('/loans/borrow', 'POST', { bookId });
+                showMessage('Book borrowed successfully!', 'success');
+                await loadBooks(); // Refresh the books list
+            } catch (error) {
+                console.error('Error borrowing book:', error);
+                showMessage(error.message || 'Failed to borrow book', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Open add book modal
+        function openAddBookModal() {
+            editingBookId = null;
+            document.getElementById('modalTitle').textContent = 'Add New Book';
+            document.getElementById('bookForm').reset();
+            document.getElementById('bookModal').style.display = 'block';
+        }
+
+        // Edit book
+        async function editBook(bookId) {
+            try {
+                const response = await api(`/books/${bookId}`);
+                const book = response.book;
+                
+                editingBookId = bookId;
+                document.getElementById('modalTitle').textContent = 'Edit Book';
+                document.getElementById('bookTitle').value = book.title;
+                document.getElementById('bookAuthor').value = book.author;
+                document.getElementById('bookCategory').value = book.category;
+                document.getElementById('bookIsbn').value = book.isbn || '';
+                document.getElementById('bookCopies').value = book.totalCopies;
+                
+                document.getElementById('bookModal').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading book for editing:', error);
+                showMessage('Failed to load book details', 'error');
+            }
+        }
+
+        // Delete book
+        async function deleteBook(bookId) {
+            if (!confirm('Are you sure you want to delete this book? This action cannot be undone.')) {
+                return;
+            }
+
+            showLoading();
+            try {
+                await api(`/books/${bookId}`, 'DELETE');
+                showMessage('Book deleted successfully!', 'success');
+                await loadBooks();
+            } catch (error) {
+                console.error('Error deleting book:', error);
+                showMessage(error.message || 'Failed to delete book', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Handle book form submission
+        document.getElementById('bookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const bookData = {
+                title: document.getElementById('bookTitle').value.trim(),
+                author: document.getElementById('bookAuthor').value.trim(),
+                category: document.getElementById('bookCategory').value.trim(),
+                isbn: document.getElementById('bookIsbn').value.trim() || null,
+                totalCopies: parseInt(document.getElementById('bookCopies').value)
+            };
+
+            showLoading();
+            try {
+                if (editingBookId) {
+                    await api(`/books/${editingBookId}`, 'PUT', bookData);
+                    showMessage('Book updated successfully!', 'success');
+                } else {
+                    await api('/books', 'POST', bookData);
+                    showMessage('Book added successfully!', 'success');
+                }
+                
+                closeBookModal();
+                await loadBooks();
+                
+            } catch (error) {
+                console.error('Error saving book:', error);
+                showMessage(error.message || 'Failed to save book', 'error');
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // Close book modal
+        function closeBookModal() {
+            document.getElementById('bookModal').style.display = 'none';
+            document.getElementById('bookForm').reset();
+            editingBookId = null;
+        }
+
+        // Close book details modal
+        function closeBookDetailsModal() {
+            document.getElementById('bookDetailsModal').style.display = 'none';
+        }
+
+        // Toggle role-specific elements
+        function toggleRoleElements(role) {
+            const adminElements = document.querySelectorAll('.admin-only');
+            const userElements = document.querySelectorAll('.user-only');
+
+            if (role === 'admin') {
+                adminElements.forEach(el => el.style.display = 'block');
+                userElements.forEach(el => el.style.display = 'none');
+            } else {
+                adminElements.forEach(el => el.style.display = 'none');
+                userElements.forEach(el => el.style.display = 'block');
+            }
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const bookModal = document.getElementById('bookModal');
+            const detailsModal = document.getElementById('bookDetailsModal');
+            
+            if (event.target === bookModal) {
+                closeBookModal();
+            }
+            if (event.target === detailsModal) {
+                closeBookDetailsModal();
+            }
+        }
+    </script>
+</body>
+</html>
