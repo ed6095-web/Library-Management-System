@@ -189,6 +189,17 @@ function setupLoginPage() {
     
     if (signupForm) {
         signupForm.addEventListener('submit', handleSignup);
+        
+        // Add event listener for role change to show/hide admin email note
+        const signupRole = document.getElementById('signupRole');
+        if (signupRole) {
+            signupRole.addEventListener('change', function() {
+                const adminEmailNote = document.getElementById('adminEmailNote');
+                if (adminEmailNote) {
+                    adminEmailNote.style.display = this.value === 'admin' ? 'block' : 'none';
+                }
+            });
+        }
     }
 }
 
@@ -263,6 +274,12 @@ async function handleSignup(e) {
     
     if (!isValidEmail(signupData.email)) {
         showMessage('Please enter a valid email address', 'error');
+        return;
+    }
+    
+    // Validate admin email domain
+    if (signupData.role === 'admin' && !isValidAdminEmail(signupData.email)) {
+        showMessage('Admin accounts require an email ending with @srmist.edu.in (e.g., ed6095@srmist.edu.in)', 'error');
         return;
     }
     
@@ -362,6 +379,15 @@ async function logout() {
 function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+}
+
+/**
+ * Validate admin email domain
+ * @param {string} email - Email to validate
+ * @returns {boolean} Is valid admin email (ends with @srmist.edu.in)
+ */
+function isValidAdminEmail(email) {
+    return email.toLowerCase().endsWith('@srmist.edu.in');
 }
 
 // ============================================

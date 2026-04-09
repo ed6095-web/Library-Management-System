@@ -201,6 +201,14 @@ public class AuthServlet extends HttpServlet {
                 return;
             }
             
+            // Validate admin email domain - only @srmist.edu.in can be admin
+            if ("admin".equalsIgnoreCase(role)) {
+                if (!email.trim().toLowerCase().endsWith("@srmist.edu.in")) {
+                    sendErrorResponse(response, "Admin accounts require an email ending with @srmist.edu.in (e.g., ed6095@srmist.edu.in)", 400);
+                    return;
+                }
+            }
+            
             // Check if email already exists
             if (userDAO.emailExists(email.trim())) {
                 sendErrorResponse(response, "Email already registered", 409);
