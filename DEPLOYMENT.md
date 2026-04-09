@@ -7,13 +7,62 @@ This guide explains how to deploy the Library Management System with:
 
 ---
 
-## Part 1: Deploy Backend to Railway
+## Part 1: Deploy Backend to Render (or Railway)
 
-### Prerequisites
+### Option A: Deploy to Render (Recommended)
+
+#### Prerequisites
+- GitHub account (already done ✓)
+- Render account (https://render.com)
+
+#### Steps
+
+1. **Create Render Account**
+   - Go to https://render.com and sign up
+   - Connect your GitHub account
+
+2. **Create New Web Service**
+   - Click "New +" → "Web Service"
+   - Connect your GitHub repository
+   - Select `Library-Management-System`
+   - **Important settings:**
+     - **Name**: `library-management-backend`
+     - **Environment**: Docker (or Java if available)
+     - **Build Command**: `javac -cp "lib/*" -d out backend/src/*.java`
+     - **Start Command**: `java -cp "out:lib/*" backend.src.Main`
+     - **Plan**: Free or Paid (free tier has limitations)
+
+3. **Configure Environment Variables**
+   - In Render dashboard, go to Environment
+   - Add these environment variables:
+     ```
+     DB_HOST=your_database_host
+     DB_USER=your_database_user
+     DB_PASSWORD=your_database_password
+     DB_NAME=library_management
+     PORT=8080
+     ```
+   - Note: You may need to set up a MySQL database separately (Render, AWS, or external provider)
+
+4. **Deploy**
+   - Render will automatically detect commits
+   - Deployment will start automatically
+   - Wait for build and deployment to complete (~5-10 minutes)
+   - Note down your backend URL (e.g., `https://library-management-backend.onrender.com`)
+
+5. **Update Database Connection**
+   - Update `backend/src/DBConnection.java` with deployed database credentials
+   - Commit and push changes
+
+---
+
+### Option B: Deploy to Railway
+
+#### Prerequisites
 - GitHub account (already done ✓)
 - Railway account (https://railway.app)
 
-### Steps
+#### Steps
 
 1. **Create Railway Account**
    - Go to https://railway.app and sign up
@@ -126,6 +175,7 @@ return 'https://your-backend-railway-url/api'; // Replace with actual URL
 
 ## Quick Links
 
+- **Render Dashboard**: https://dashboard.render.com
 - **Railway Dashboard**: https://railway.app/dashboard
 - **Vercel Dashboard**: https://vercel.com/dashboard
 - **Repository**: https://github.com/ed6095-web/Library-Management-System
