@@ -3,8 +3,7 @@
  * Handles authentication, API calls, and common functionality
  */
 
-// Configuration
-const API_BASE_URL = 'http://localhost:8080/api';
+// Configuration - API_BASE_URL is defined in config.js
 const SESSION_STORAGE_KEY = 'library_user';
 
 // Global state

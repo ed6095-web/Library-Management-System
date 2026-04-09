@@ -1,0 +1,12 @@
+*.class
+*.jar
+out/
+.DS_Store
+.env
+node_modules/
+*.log
+.idea/
+*.iml
+target/
+build/
+dist/
