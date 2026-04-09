@@ -10,10 +10,13 @@ import java.sql.SQLException;
  */
 public class DBConnection {
     
-    // Database configuration constants
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/library_management";
-    private static final String DB_USERNAME = "root";
-    private static final String DB_PASSWORD = "@Bettiah1234";
+    // Database configuration - Load from environment variables
+    private static final String DB_HOST = getEnv("DB_HOST", "localhost");
+    private static final String DB_PORT = getEnv("DB_PORT", "3306");
+    private static final String DB_NAME = getEnv("DB_NAME", "library_management");
+    private static final String DB_USERNAME = getEnv("DB_USER", "root");
+    private static final String DB_PASSWORD = getEnv("DB_PASSWORD", "");
+    private static final String DB_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME + "?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false";
     private static final String DB_DRIVER = "com.mysql.cj.jdbc.Driver";
     
     // Singleton connection instance
@@ -122,5 +125,16 @@ public class DBConnection {
      */
     public static String getDatabaseUsername() {
         return DB_USERNAME;
+    }
+    
+    /**
+     * Helper method to get environment variable with default value
+     * @param key environment variable name
+     * @param defaultValue default value if not found
+     * @return environment variable value or default
+     */
+    private static String getEnv(String key, String defaultValue) {
+        String value = System.getenv(key);
+        return value != null ? value : defaultValue;
     }
 }
