@@ -1,5 +1,5 @@
-# Use OpenJDK 11
-FROM openjdk:11
+# Use Amazon Corretto OpenJDK
+FROM amazoncorretto:11
 
 # Set working directory
 WORKDIR /app
