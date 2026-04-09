@@ -1,9 +1,7 @@
 services:
   - type: web
     name: library-management-backend
-    runtime: java
-    buildCommand: javac -cp "lib/*" -d out backend/src/*.java
-    startCommand: java -cp "out:lib/*" backend.src.Main
+    runtime: docker
     plan: free
     envVars:
       - key: PORT
