@@ -25,6 +25,9 @@ public class Main {
                 System.exit(1);
             }
             
+            // Initialize database schema and seed data
+            DatabaseInitializer.initialize();
+            
             // Create Jetty server
             Server server = new Server(SERVER_PORT);
             
