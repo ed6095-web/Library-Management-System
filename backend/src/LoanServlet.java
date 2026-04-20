@@ -34,6 +34,9 @@ public class LoanServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
+        // Set CORS headers FIRST, before any auth checks
+        setCORSHeaders(request, response);
+        
         // Check authentication
         if (!isAuthenticated(request)) {
             sendErrorResponse(response, "Authentication required", 401);
@@ -41,8 +44,6 @@ public class LoanServlet extends HttpServlet {
         }
         
         String pathInfo = request.getPathInfo();
-        
-        setCORSHeaders(request, response);
         
         if (pathInfo == null) {
             // Get loans based on user role
@@ -89,6 +90,9 @@ public class LoanServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
+        // Set CORS headers FIRST, before any auth checks
+        setCORSHeaders(request, response);
+        
         // Check authentication
         if (!isAuthenticated(request)) {
             sendErrorResponse(response, "Authentication required", 401);
@@ -96,8 +100,6 @@ public class LoanServlet extends HttpServlet {
         }
         
         String pathInfo = request.getPathInfo();
-        
-        setCORSHeaders(request, response);
         
         if (pathInfo == null) {
             sendErrorResponse(response, "Invalid endpoint", 400);

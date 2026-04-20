@@ -95,13 +95,14 @@ public class BookServlet extends HttpServlet {
     protected void doPut(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
+        // Set CORS headers FIRST
+        setCORSHeaders(request, response);
+        
         // Check authentication and admin role
         if (!isAuthenticated(request) || !isAdmin(request)) {
             sendErrorResponse(response, "Admin access required", 403);
             return;
         }
-        
-        setCORSHeaders(request, response);
         
         String pathInfo = request.getPathInfo();
         if (pathInfo != null && pathInfo.startsWith("/")) {
@@ -123,13 +124,14 @@ public class BookServlet extends HttpServlet {
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
+        // Set CORS headers FIRST
+        CORSUtil.setCORSHeaders(request, response);
+        
         // Check authentication and admin role
         if (!isAuthenticated(request) || !isAdmin(request)) {
             sendErrorResponse(response, "Admin access required", 403);
             return;
         }
-        
-        CORSUtil.setCORSHeaders(request, response);
         
         String pathInfo = request.getPathInfo();
         if (pathInfo != null && pathInfo.startsWith("/")) {
