@@ -1,0 +1,13 @@
+{
+  "name": "library-management-frontend",
+  "version": "1.0.0",
+  "description": "Library Management System - Frontend",
+  "private": true,
+  "scripts": {
+    "start": "echo 'Static frontend - no build required'",
+    "build": "echo 'Static frontend - no build required'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

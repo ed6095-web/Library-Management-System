@@ -6,15 +6,25 @@
 const getApiBaseUrl = () => {
   // Check if we're in production (Vercel environment)
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    // Get the API URL from environment variable or use a default
-    const apiUrl = localStorage.getItem('apiBaseUrl') || window.__API_BASE_URL__;
-    
-    if (apiUrl) {
-      return apiUrl;
+    // Try to get API URL from multiple sources
+    // 1. First check localStorage (user set value)
+    const storedUrl = localStorage.getItem('apiBaseUrl');
+    if (storedUrl) {
+      return storedUrl;
     }
     
-    // Fallback: assume backend is deployed to similar domain structure
-    // e.g., if frontend is on myapp.vercel.app, backend might be on myapp-backend.railway.app
+    // 2. Check for injected global variable from Vercel env
+    if (window.__API_BASE_URL__) {
+      return window.__API_BASE_URL__;
+    }
+    
+    // 3. Try to get from DOM data attribute (set in index.html)
+    const htmlElement = document.documentElement;
+    if (htmlElement && htmlElement.getAttribute('data-api-url')) {
+      return htmlElement.getAttribute('data-api-url');
+    }
+    
+    // 4. Default fallback
     console.warn('API_BASE_URL not configured. Please set it in browser console: localStorage.setItem("apiBaseUrl", "YOUR_BACKEND_URL")');
     return 'https://your-backend-url.railway.app/api'; // Replace with your backend URL
   }
@@ -24,3 +34,8 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
+
+// Export for use in other scripts
+window.API_BASE_URL = API_BASE_URL;
+
+console.log('API Base URL configured as:', API_BASE_URL);
