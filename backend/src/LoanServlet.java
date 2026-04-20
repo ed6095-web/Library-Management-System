@@ -494,13 +494,13 @@ public class LoanServlet extends HttpServlet {
     /**
      * Set CORS headers
      */
+    private void setCORSHeaders(HttpServletRequest request, HttpServletResponse response) {
+        CORSUtil.setCORSHeaders(request, response);
+    }
+    
     private void setCORSHeaders(HttpServletResponse response) {
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        response.setHeader("Access-Control-Allow-Credentials", "true");
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
+        // Legacy method - should not be used, but kept for compatibility
+        CORSUtil.setCORSHeaders(null, response);
     }
     
     /**

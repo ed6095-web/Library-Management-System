@@ -38,7 +38,7 @@ public class BookServlet extends HttpServlet {
         String pathInfo = request.getPathInfo();
         
         // Set CORS headers
-        setCORSHeaders(response);
+        CORSUtil.setCORSHeaders(request, response);
         
         if (pathInfo == null) {
             // Get all books
@@ -84,7 +84,7 @@ public class BookServlet extends HttpServlet {
             return;
         }
         
-        setCORSHeaders(response);
+        CORSUtil.setCORSHeaders(request, response);
         addBook(request, response);
     }
     
@@ -129,7 +129,7 @@ public class BookServlet extends HttpServlet {
             return;
         }
         
-        setCORSHeaders(response);
+        CORSUtil.setCORSHeaders(request, response);
         
         String pathInfo = request.getPathInfo();
         if (pathInfo != null && pathInfo.startsWith("/")) {
@@ -150,7 +150,7 @@ public class BookServlet extends HttpServlet {
     @Override
     protected void doOptions(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        setCORSHeaders(response);
+        CORSUtil.setCORSHeaders(request, response);
         response.setStatus(HttpServletResponse.SC_OK);
     }
     
@@ -438,13 +438,13 @@ public class BookServlet extends HttpServlet {
     /**
      * Set CORS headers
      */
+    private void setCORSHeaders(HttpServletRequest request, HttpServletResponse response) {
+        CORSUtil.setCORSHeaders(request, response);
+    }
+    
     private void setCORSHeaders(HttpServletResponse response) {
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        response.setHeader("Access-Control-Allow-Credentials", "true");
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
+        // Legacy method - should not be used, but kept for compatibility
+        CORSUtil.setCORSHeaders(null, response);
     }
     
     /**
