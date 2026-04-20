@@ -297,7 +297,7 @@ public class LoanDAO {
                       "FROM loans l " +
                       "JOIN books b ON l.book_id = b.id " +
                       "JOIN users u ON l.user_id = u.id " +
-                      "WHERE l.status = 'active' AND l.due_date < CURDATE() " +
+                      "WHERE l.status = 'active' AND l.due_date < CURRENT_DATE " +
                       "ORDER BY l.due_date ASC";
         
         try (Statement stmt = connection.createStatement();
@@ -334,7 +334,7 @@ public class LoanDAO {
      * Update overdue loan status
      */
     private void updateOverdueStatus() {
-        String query = "UPDATE loans SET status = 'overdue' WHERE status = 'active' AND due_date < CURDATE()";
+        String query = "UPDATE loans SET status = 'overdue' WHERE status = 'active' AND due_date < CURRENT_DATE";
         
         try (Statement stmt = connection.createStatement()) {
             int updatedRows = stmt.executeUpdate(query);
@@ -489,7 +489,7 @@ public class LoanDAO {
             }
             
             // Overdue loans
-            String overdueQuery = "SELECT COUNT(*) FROM loans WHERE status = 'active' AND due_date < CURDATE()";
+            String overdueQuery = "SELECT COUNT(*) FROM loans WHERE status = 'active' AND due_date < CURRENT_DATE";
             try (Statement stmt = connection.createStatement();
                  ResultSet rs = stmt.executeQuery(overdueQuery)) {
                 if (rs.next()) {
