@@ -132,6 +132,11 @@ public class AuthServlet extends HttpServlet {
                 session.setAttribute("userRole", user.getRole());
                 session.setMaxInactiveInterval(3600); // 1 hour session timeout
                 
+                // Set session cookie with proper SameSite for cross-origin requests
+                String sessionId = session.getId();
+                String cookieValue = "JSESSIONID=" + sessionId + "; Path=/; HttpOnly; Secure; SameSite=None";
+                response.addHeader("Set-Cookie", cookieValue);
+                
                 // Send success response
                 JsonObject responseData = new JsonObject();
                 responseData.addProperty("success", true);
