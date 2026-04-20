@@ -7,6 +7,9 @@ WORKDIR /app
 # Copy lib files
 COPY lib/ /app/lib/
 
+# Download PostgreSQL JDBC driver
+RUN curl -o /app/lib/postgresql-42.7.1.jar https://jdbc.postgresql.org/download/postgresql-42.7.1.jar
+
 # Copy source files
 COPY backend/src/ /app/backend/src/
 

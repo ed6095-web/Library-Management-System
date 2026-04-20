@@ -12,12 +12,12 @@ public class DBConnection {
     
     // Database configuration - Load from environment variables
     private static final String DB_HOST = getEnv("DB_HOST", "localhost");
-    private static final String DB_PORT = getEnv("DB_PORT", "3306");
+    private static final String DB_PORT = getEnv("DB_PORT", "5432");
     private static final String DB_NAME = getEnv("DB_NAME", "library_management");
     private static final String DB_USERNAME = getEnv("DB_USER", "root");
-    private static final String DB_PASSWORD = getEnv("DB_PASSWORD", "");
-    private static final String DB_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME + "?serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false";
-    private static final String DB_DRIVER = "com.mysql.cj.jdbc.Driver";
+    private static final String DB_PASSWORD = getEnv("DB_PASSWORD", "@Bettiah1234");
+    private static final String DB_URL = "jdbc:postgresql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME;
+    private static final String DB_DRIVER = "org.postgresql.Driver";
     
     // Singleton connection instance
     private static Connection connection = null;
