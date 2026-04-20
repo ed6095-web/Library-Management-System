@@ -69,11 +69,11 @@
                 <table class="users-table" id="usersTable">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Created Date</th>
-                            <th>Actions</th>
+                            <th data-label="Name">Name</th>
+                            <th data-label="Email">Email</th>
+                            <th data-label="Role">Role</th>
+                            <th data-label="Created Date">Created Date</th>
+                            <th data-label="Actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="usersTableBody">
@@ -237,20 +237,20 @@
                 
                 usersHtml += `
                     <tr class="user-row">
-                        <td>
+                        <td data-label="Name">
                             <div class="user-info">
                                 <strong>${escapeHtml(user.name)}</strong>
                                 ${isCurrentUser ? '<span class="current-user-badge">You</span>' : ''}
                             </div>
                         </td>
-                        <td>${escapeHtml(user.email)}</td>
-                        <td>
+                        <td data-label="Email">${escapeHtml(user.email)}</td>
+                        <td data-label="Role">
                             <span class="role-badge ${roleClass}">
                                 ${user.role.toUpperCase()}
                             </span>
                         </td>
-                        <td>${formatDate(user.createdAt)}</td>
-                        <td class="user-actions">
+                        <td data-label="Created Date">${formatDate(user.createdAt)}</td>
+                        <td data-label="Actions" class="user-actions">
                             <button class="btn btn-sm btn-secondary" onclick="viewUserDetails(${user.id})">
                                 👁️ View
                             </button>

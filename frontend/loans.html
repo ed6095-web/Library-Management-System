@@ -220,22 +220,22 @@
                 
                 loansHtml += `
                     <tr class="loan-row ${statusClass}">
-                        <td>
+                        <td data-label="Book">
                             <div class="book-info">
                                 <strong>${escapeHtml(loan.bookTitle)}</strong>
                                 <small>by ${escapeHtml(loan.bookAuthor)}</small>
                             </div>
                         </td>
-                        ${userRole === 'admin' ? `<td>${escapeHtml(loan.userName)}</td>` : ''}
-                        <td>${formatDate(loan.loanDate)}</td>
-                        <td class="${isOverdue ? 'overdue-date' : ''}">${formatDate(loan.dueDate)}</td>
-                        <td>${loan.returnDate ? formatDate(loan.returnDate) : '-'}</td>
-                        <td>
+                        ${userRole === 'admin' ? `<td data-label="Borrower">${escapeHtml(loan.userName)}</td>` : ''}
+                        <td data-label="Loan Date">${formatDate(loan.loanDate)}</td>
+                        <td data-label="Due Date" class="${isOverdue ? 'overdue-date' : ''}">${formatDate(loan.dueDate)}</td>
+                        <td data-label="Return Date">${loan.returnDate ? formatDate(loan.returnDate) : '-'}</td>
+                        <td data-label="Status">
                             <span class="status-badge ${statusClass}">
                                 ${displayStatus.toUpperCase()}
                             </span>
                         </td>
-                        <td>
+                        <td data-label="Actions">
                             ${loan.status === 'active' ? 
                                 `<button class="btn btn-sm btn-primary" onclick="openReturnModal(${loan.id})">
                                     Return Book
