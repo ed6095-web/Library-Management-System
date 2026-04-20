@@ -42,7 +42,7 @@ public class LoanServlet extends HttpServlet {
         
         String pathInfo = request.getPathInfo();
         
-        setCORSHeaders(response);
+        setCORSHeaders(request, response);
         
         if (pathInfo == null) {
             // Get loans based on user role
@@ -97,7 +97,7 @@ public class LoanServlet extends HttpServlet {
         
         String pathInfo = request.getPathInfo();
         
-        setCORSHeaders(response);
+        setCORSHeaders(request, response);
         
         if (pathInfo == null) {
             sendErrorResponse(response, "Invalid endpoint", 400);

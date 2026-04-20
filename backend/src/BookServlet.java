@@ -101,7 +101,7 @@ public class BookServlet extends HttpServlet {
             return;
         }
         
-        setCORSHeaders(response);
+        setCORSHeaders(request, response);
         
         String pathInfo = request.getPathInfo();
         if (pathInfo != null && pathInfo.startsWith("/")) {
