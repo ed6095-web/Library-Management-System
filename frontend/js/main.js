@@ -313,26 +313,64 @@ async function handleSignup(e) {
  */
 async function checkAuth() {
     try {
-        // First check session storage
+        // First check session storage (most important for client-side auth)
         const storedUser = sessionStorage.getItem(SESSION_STORAGE_KEY);
         if (storedUser) {
-            currentUser = JSON.parse(storedUser);
+            try {
+                currentUser = JSON.parse(storedUser);
+                console.log('✓ Using stored session:', currentUser.email);
+                
+                // In background, verify with server (non-blocking)
+                // Don't fail if this check fails - trust the stored session
+                api('/auth/check')
+                    .then(response => {
+                        if (response.authenticated) {
+                            console.log('✓ Server verified session');
+                        } else {
+                            console.warn('⚠️ Server doesn\'t recognize session, but client has stored data');
+                        }
+                    })
+                    .catch(error => {
+                        console.warn('⚠️ Could not verify with server:', error.message);
+                    });
+                
+                return true;
+            } catch (e) {
+                console.error('Error parsing stored user:', e);
+                sessionStorage.removeItem(SESSION_STORAGE_KEY);
+            }
         }
         
-        // Verify with server
+        // If no stored user, try to get session from server
+        console.log('🔍 No stored session, checking with server...');
         const response = await api('/auth/check');
         
         if (response.authenticated) {
             currentUser = response.user;
             sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(response.user));
+            console.log('✓ Server session verified');
             return true;
         } else {
             currentUser = null;
             sessionStorage.removeItem(SESSION_STORAGE_KEY);
+            console.log('✗ Not authenticated');
             return false;
         }
     } catch (error) {
-        console.error('Auth check failed:', error);
+        console.error('Auth check error:', error);
+        
+        // Last resort: check if there's stored user data and use it
+        const storedUser = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (storedUser) {
+            console.warn('⚠️ Server check failed, but using stored session');
+            try {
+                currentUser = JSON.parse(storedUser);
+                return true;
+            } catch (e) {
+                console.error('Error parsing stored user:', e);
+            }
+        }
+        
         currentUser = null;
         sessionStorage.removeItem(SESSION_STORAGE_KEY);
         return false;
