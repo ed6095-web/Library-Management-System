@@ -20,22 +20,23 @@ public class CORSUtil {
     /**
      * Set CORS headers for the response
      * Properly handles credentials for session management
-     * @param request HTTP request
+     * @param request HTTP request (can be null for fallback cases)
      * @param response HTTP response
      */
     public static void setCORSHeaders(HttpServletRequest request, HttpServletResponse response) {
-        String origin = request.getHeader("Origin");
+        // Get origin from request, handle null request gracefully
+        String origin = (request != null) ? request.getHeader("Origin") : null;
         
         // Always check origin and set specific allowed origin (not wildcard when using credentials)
         if (origin != null && isOriginAllowed(origin)) {
             // Origin is allowed - use it specifically (required when credentials mode is 'include')
             response.setHeader("Access-Control-Allow-Origin", origin);
             response.setHeader("Access-Control-Allow-Credentials", "true");
-        } else if (origin == null) {
-            // No origin header (likely same-origin request) - allow all
+        } else if (origin != null) {
+            // Origin provided but not in whitelist - only allow wildcard (no credentials)
             response.setHeader("Access-Control-Allow-Origin", "*");
         } else {
-            // Origin not in whitelist - only allow wildcard (no credentials)
+            // No origin header or null request - allow all (safe for same-origin or preflight)
             response.setHeader("Access-Control-Allow-Origin", "*");
         }
         
