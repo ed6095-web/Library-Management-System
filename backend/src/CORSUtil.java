@@ -2,6 +2,7 @@ package backend.src;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.regex.Pattern;
 
 /**
  * CORS utility class for handling Cross-Origin requests
@@ -11,10 +12,21 @@ public class CORSUtil {
     // Allowed origins
     private static final String[] ALLOWED_ORIGINS = {
         "https://library-management-system-mu-one.vercel.app",
+        "https://library-management-system-0oiu.vercel.app",
         "http://localhost:3000",
         "http://localhost:8080",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:8080"
+    };
+
+    // Allow trusted host patterns for preview deployments and LAN device testing.
+    private static final Pattern[] ALLOWED_ORIGIN_PATTERNS = {
+        Pattern.compile("^https://[a-zA-Z0-9-]+\\.vercel\\.app$"),
+        Pattern.compile("^http://localhost(:\\d+)?$"),
+        Pattern.compile("^http://127\\.0\\.0\\.1(:\\d+)?$"),
+        Pattern.compile("^http://192\\.168\\.\\d{1,3}\\.\\d{1,3}(:\\d+)?$"),
+        Pattern.compile("^http://10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}(:\\d+)?$"),
+        Pattern.compile("^http://172\\.(1[6-9]|2\\d|3[0-1])\\.\\d{1,3}\\.\\d{1,3}(:\\d+)?$")
     };
     
     /**
@@ -32,9 +44,11 @@ public class CORSUtil {
             // Origin is allowed - use it specifically (required when credentials mode is 'include')
             response.setHeader("Access-Control-Allow-Origin", origin);
             response.setHeader("Access-Control-Allow-Credentials", "true");
+            response.setHeader("Vary", "Origin");
         } else if (origin != null) {
-            // Origin provided but not in whitelist - only allow wildcard (no credentials)
-            response.setHeader("Access-Control-Allow-Origin", "*");
+            // Unknown origin: keep restrictive and avoid credentialed wildcard CORS.
+            response.setHeader("Access-Control-Allow-Origin", "null");
+            response.setHeader("Vary", "Origin");
         } else {
             // No origin header or null request - allow all (safe for same-origin or preflight)
             response.setHeader("Access-Control-Allow-Origin", "*");
@@ -64,6 +78,13 @@ public class CORSUtil {
                 return true;
             }
         }
+
+        for (Pattern pattern : ALLOWED_ORIGIN_PATTERNS) {
+            if (pattern.matcher(origin).matches()) {
+                return true;
+            }
+        }
+
         return false;
     }
 }

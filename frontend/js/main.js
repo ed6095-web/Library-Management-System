@@ -21,7 +21,16 @@ let currentUser = null;
  * @returns {Promise<object>} API response
  */
 async function api(endpoint, method = 'GET', data = null) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const runtimeApiBaseUrl = typeof window.getApiBaseUrl === 'function'
+        ? window.getApiBaseUrl()
+        : (window.API_BASE_URL || API_BASE_URL || '');
+    const normalizedBaseUrl = (runtimeApiBaseUrl || '').replace(/\/+$/, '');
+
+    if (!normalizedBaseUrl) {
+        throw new Error('API URL is not configured. Set it with localStorage.setItem("apiBaseUrl", "https://your-backend-url/api") and reload.');
+    }
+
+    const url = `${normalizedBaseUrl}${endpoint}`;
     
     const options = {
         method,
@@ -37,15 +46,23 @@ async function api(endpoint, method = 'GET', data = null) {
     
     try {
         const response = await fetch(url, options);
-        const result = await response.json();
+        const isJson = (response.headers.get('content-type') || '').includes('application/json');
+        const result = isJson ? await response.json() : null;
         
         if (!response.ok) {
-            throw new Error(result.error || `HTTP error! status: ${response.status}`);
+            const fallbackMessage = `HTTP error! status: ${response.status}`;
+            throw new Error((result && result.error) ? result.error : fallbackMessage);
         }
         
-        return result;
+        return result || {};
     } catch (error) {
         console.error('API Error:', error);
+
+        const isNetworkError = error instanceof TypeError && /fetch/i.test(error.message || '');
+        if (isNetworkError) {
+            throw new Error(`Failed to fetch from ${url}. Check backend URL, HTTPS/HTTP mismatch, and CORS settings.`);
+        }
+
         throw error;
     }
 }
