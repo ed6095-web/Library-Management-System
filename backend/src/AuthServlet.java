@@ -36,7 +36,7 @@ public class AuthServlet extends HttpServlet {
         String pathInfo = request.getPathInfo();
         
         // Set CORS headers
-        setCORSHeaders(response);
+        CORSUtil.setCORSHeaders(request, response);
         
         if (pathInfo == null) {
             sendErrorResponse(response, "Invalid endpoint", 400);
@@ -66,7 +66,7 @@ public class AuthServlet extends HttpServlet {
         String pathInfo = request.getPathInfo();
         
         // Set CORS headers
-        setCORSHeaders(response);
+        CORSUtil.setCORSHeaders(request, response);
         
         if (pathInfo == null) {
             sendErrorResponse(response, "Invalid endpoint", 400);
@@ -92,7 +92,7 @@ public class AuthServlet extends HttpServlet {
     @Override
     protected void doOptions(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        setCORSHeaders(response);
+        CORSUtil.setCORSHeaders(request, response);
         response.setStatus(HttpServletResponse.SC_OK);
     }
     
@@ -284,17 +284,7 @@ public class AuthServlet extends HttpServlet {
         sendSuccessResponse(response, responseData);
     }
     
-    /**
-     * Set CORS headers
-     */
-    private void setCORSHeaders(HttpServletResponse response) {
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        response.setHeader("Access-Control-Allow-Credentials", "true");
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-    }
+
     
     /**
      * Parse JSON request body

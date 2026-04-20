@@ -126,7 +126,7 @@ public class LoanServlet extends HttpServlet {
     @Override
     protected void doOptions(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        setCORSHeaders(response);
+        CORSUtil.setCORSHeaders(request, response);
         response.setStatus(HttpServletResponse.SC_OK);
     }
     
