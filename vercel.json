@@ -1,5 +1,5 @@
 {
-  "buildCommand": "echo 'Static frontend'",
+  "buildCommand": "",
   "outputDirectory": "frontend",
   "public": false,
   "functions": {
